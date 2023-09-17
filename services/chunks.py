@@ -18,9 +18,9 @@ MIN_CHUNK_SIZE_CHARS = 350  # The minimum size of each text chunk in characters
 MIN_CHUNK_LENGTH_TO_EMBED = 5  # Discard chunks shorter than this
 EMBEDDINGS_BATCH_SIZE = int(os.environ.get("OPENAI_EMBEDDING_BATCH_SIZE", 128))  # The number of embeddings to request at a time
 MAX_NUM_CHUNKS = 10000  # The maximum number of chunks to generate from a text
+CHUNKSIZE_OFFSET_RATIO = 0.9
 
-
-def get_text_chunks(text: str, chunk_token_size: Optional[int]) -> List[str]:
+def get_text_chunks(text: str, chunk_token_size: Optional[int], offset_ratio: Optional[int] = 1) -> List[str]:
     """
     Split a text into chunks of ~CHUNK_SIZE tokens, based on punctuation and newline boundaries.
 
@@ -50,7 +50,10 @@ def get_text_chunks(text: str, chunk_token_size: Optional[int]) -> List[str]:
     # Loop until all tokens are consumed
     while tokens and num_chunks < MAX_NUM_CHUNKS:
         # Take the first chunk_size tokens as a chunk
-        chunk = tokens[:chunk_size]
+        if num_chunks == 0:
+            chunk = tokens[:int(float(chunk_size) * offset_ratio)]
+        else:
+            chunk = tokens[:chunk_size]
 
         # Decode the chunk into text
         chunk_text = tokenizer.decode(chunk)
@@ -120,6 +123,7 @@ def create_document_chunks(
 
     # Split the document text into chunks
     text_chunks = get_text_chunks(doc.text, chunk_token_size)
+    # text_chunks += get_text_chunks(doc.text, chunk_token_size, CHUNKSIZE_OFFSET_RATIO)
 
     metadata = (
         DocumentChunkMetadata(**doc.metadata.__dict__)
