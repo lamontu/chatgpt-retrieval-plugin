@@ -4,6 +4,7 @@ import re
 import json
 import redis.asyncio as redis
 import numpy as np
+import jieba
 
 from redis.commands.search.query import Query as RediSearchQuery
 from redis.commands.search.indexDefinition import IndexDefinition, IndexType
@@ -113,6 +114,7 @@ class RedisDataStore(DataStore):
                 },
                 as_name="embedding",
             ),
+            "text": TextField("$.text", as_name="text")
         }
         try:
             # Check for existence of RediSearch Index
@@ -122,7 +124,7 @@ class RedisDataStore(DataStore):
             # Create the RediSearch Index
             logger.info(f"Creating new RediSearch index {REDIS_INDEX_NAME}")
             definition = IndexDefinition(
-                prefix=[REDIS_DOC_PREFIX], index_type=IndexType.JSON
+                prefix=[REDIS_DOC_PREFIX], index_type=IndexType.JSON, language="chinese"
             )
             fields = list(unpack_schema(redisearch_schema))
             logger.info(f"Creating index with fields: {fields}")
@@ -240,16 +242,28 @@ class RedisDataStore(DataStore):
         filter_str = filter_str.strip()
         filter_str = filter_str if filter_str else "*"
 
+        seg_list = jieba.cut(query.query)
+        seg_list = [seg for seg in seg_list if seg.strip()]
         # Prepare query string
         query_str = (
             f"({filter_str})=>[KNN {query.top_k} @embedding $embedding as score]"
-        )
-        return (
-            RediSearchQuery(query_str)
-            .sort_by("score")
-            .paging(0, query.top_k)
-            .dialect(2)
-        )
+        ) if query.use_embedding else (f"{' '.join(seg_list)}")
+
+        if query.use_embedding:
+            return (
+                RediSearchQuery(query_str)
+                .sort_by("score")
+                .paging(0, query.top_k)
+                .dialect(2)
+                .language("chinese")
+            )
+        else:
+            return (
+                RediSearchQuery(query_str)
+                .paging(0, query.top_k)
+                .dialect(2)
+                .language("chinese")
+            )
 
     async def _redis_delete(self, keys: List[str]):
         """
@@ -312,6 +326,9 @@ class RedisDataStore(DataStore):
             # Perform vector search
             query_response = await self.client.ft(REDIS_INDEX_NAME).search(
                 redis_query, {"embedding": embedding}
+
+            ) if query.use_embedding else await self.client.ft(REDIS_INDEX_NAME).search(
+                redis_query
             )
 
             # Iterate through the most similar documents
@@ -319,9 +336,10 @@ class RedisDataStore(DataStore):
                 # Load JSON data
                 doc_json = json.loads(doc.json)
                 # Create document chunk object with score
+                doc_score = doc.score if query.use_embedding else 1
                 result = DocumentChunkWithScore(
                     id=doc_json["metadata"]["document_id"],
-                    score=doc.score,
+                    score=doc_score,
                     text=doc_json["text"],
                     metadata=doc_json["metadata"]
                 )

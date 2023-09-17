@@ -55,6 +55,7 @@ class Query(BaseModel):
     query: str
     filter: Optional[DocumentMetadataFilter] = None
     top_k: Optional[int] = 3
+    use_embedding: Optional[bool] = True
 
 
 class QueryWithEmbedding(Query):
