@@ -9,6 +9,8 @@ from models.models import (
     Query,
     QueryResult,
     QueryWithEmbedding,
+    Message,
+    ChatResult
 )
 from services.chunks import get_document_chunks
 from services.openai import get_embeddings
@@ -68,6 +70,22 @@ class DataStore(ABC):
     async def _query(self, queries: List[QueryWithEmbedding]) -> List[QueryResult]:
         """
         Takes in a list of queries with embeddings and filters and returns a list of query results with matching document chunks and scores.
+        """
+        raise NotImplementedError
+
+    async def chat(self, messages: List[Message]) -> List[ChatResult]:
+        """
+        Takes in a list of messages.
+        """
+        msg = []
+        msg += [dict((k, v) for k, v in m) for m in messages]
+
+        return await self._chat(msg)
+
+    @abstractmethod
+    async def _chat(self, messages: List[Dict]) -> List[ChatResult]:
+        """
+        Takes in a list of messages. The Dict should contain the same filed as Message
         """
         raise NotImplementedError
 

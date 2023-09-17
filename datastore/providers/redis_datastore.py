@@ -24,8 +24,11 @@ from models.models import (
     DocumentMetadataFilter,
     QueryResult,
     QueryWithEmbedding,
+    ChatResult
 )
 from services.date import to_unix_timestamp
+
+from services.openai import get_chat_completion
 
 # Read environment variables for Redis
 REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
@@ -349,6 +352,16 @@ class RedisDataStore(DataStore):
             results.append(QueryResult(query=query.query, results=query_results))
 
         return results
+
+    async def _chat(
+        self,
+        messages: List[Dict],
+    ) -> List[ChatResult]:
+        results: List[QueryResult] = []
+        completion = get_chat_completion(messages=messages)
+        results.append(ChatResult(message=str(messages), completion=completion))
+        return results
+
 
     async def _find_keys(self, pattern: str) -> List[str]:
         return [key async for key in self.client.scan_iter(pattern)]

@@ -13,6 +13,8 @@ from models.api import (
     QueryResponse,
     UpsertRequest,
     UpsertResponse,
+    ChatRequest,
+    ChatResponse,
 )
 from datastore.factory import get_datastore
 from services.file import get_document_from_file
@@ -117,6 +119,26 @@ async def query(
             request.queries,
         )
         return QueryResponse(results=results)
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail="Internal Service Error")
+
+
+
+@sub_app.post(
+    "/chat",
+    response_model=ChatResponse,
+    # NOTE: We are describing the shape of the API endpoint input due to a current limitation in parsing arrays of objects from OpenAPI schemas. This will not be necessary in the future.
+    description="Accepts chat completion message objects array each with role and content.",
+)
+async def chat(
+    request: ChatRequest = Body(...),
+):
+    try:
+        results = await datastore.chat(
+            request.messages,
+        )
+        return ChatResponse(results=results)
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Service Error")

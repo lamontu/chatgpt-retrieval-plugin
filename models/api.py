@@ -3,6 +3,8 @@ from models.models import (
     DocumentMetadataFilter,
     Query,
     QueryResult,
+    Message,
+    ChatResult,
 )
 from pydantic import BaseModel
 from typing import List, Optional
@@ -23,6 +25,11 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     results: List[QueryResult]
 
+class ChatRequest(BaseModel):
+    messages: List[Message]
+
+class ChatResponse(BaseModel):
+    results: List[ChatResult]
 
 class DeleteRequest(BaseModel):
     ids: Optional[List[str]] = None

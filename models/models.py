@@ -65,3 +65,11 @@ class QueryWithEmbedding(Query):
 class QueryResult(BaseModel):
     query: str
     results: List[DocumentChunkWithScore]
+
+class Message(BaseModel):
+    role: str
+    content: str
+
+class ChatResult(BaseModel):
+    message: str
+    completion: str
