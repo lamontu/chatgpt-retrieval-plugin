@@ -10,7 +10,7 @@ from models.models import (
     QueryResult,
     QueryWithEmbedding,
     Message,
-    ChatResult
+    ChatResult,
 )
 from services.chunks import get_document_chunks
 from services.openai import get_embeddings
@@ -109,6 +109,24 @@ class DataStore(ABC):
         Takes in a list of messages. The Dict should contain the same filed as Message
         """
         raise NotImplementedError
+
+
+    async def retrieve(self, queries: List[Query]) -> List[ChatResult]:
+        # query_results = await self.query_all(queries)
+        query_results = await self.query(queries)
+        chat_results = []
+        for query_result in query_results:
+            size = len(query_result.results)
+            if size > 0:
+                text = query_result.results[0].text
+
+            # for result in query_result.results:
+                # text = result.text
+                message = [Message(role='user', content=text), Message(role='user',content=query_result.query)]
+                chat_result = await self.chat(message)
+                chat_results += chat_result
+        return chat_results
+
 
     @abstractmethod
     async def delete(

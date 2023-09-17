@@ -15,6 +15,8 @@ from models.api import (
     UpsertResponse,
     ChatRequest,
     ChatResponse,
+    RetrieveRequest,
+    RetrieveResponse
 )
 from datastore.factory import get_datastore
 from services.file import get_document_from_file
@@ -139,6 +141,25 @@ async def chat(
             request.messages,
         )
         return ChatResponse(results=results)
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail="Internal Service Error")
+
+
+@sub_app.post(
+    "/retrieve",
+    response_model=RetrieveResponse,
+    # NOTE: We are describing the shape of the API endpoint input due to a current limitation in parsing arrays of objects from OpenAPI schemas. This will not be necessary in the future.
+    description="Accepts chat completion message objects array each with role and content.",
+)
+async def retrieve(
+    request: RetrieveRequest = Body(...),
+):
+    try:
+        results = await datastore.retrieve(
+            request.queries,
+        )
+        return RetrieveResponse(results=results)
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Service Error")

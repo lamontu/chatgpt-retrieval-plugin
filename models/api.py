@@ -36,6 +36,11 @@ class DeleteRequest(BaseModel):
     filter: Optional[DocumentMetadataFilter] = None
     delete_all: Optional[bool] = False
 
+class RetrieveRequest(BaseModel):
+    queries: List[Query]
+
+class RetrieveResponse(BaseModel):
+    results: List[ChatResult]
 
 class DeleteResponse(BaseModel):
     success: bool

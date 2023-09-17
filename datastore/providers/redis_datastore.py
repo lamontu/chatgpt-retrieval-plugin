@@ -366,6 +366,23 @@ class RedisDataStore(DataStore):
     async def _find_keys(self, pattern: str) -> List[str]:
         return [key async for key in self.client.scan_iter(pattern)]
 
+    async def query_all(self, queries: List[QueryWithEmbedding]) -> List[QueryResult]:
+        results = []
+        for query in queries:
+            keys = []
+            if query.filter and query.filter.document_id:
+                keys += [key async for key in self.client.scan_iter(f"{REDIS_DOC_PREFIX}:{query.filter.document_id}:*")]
+            doc_jsons = [await self.client.json().get(key) for key in keys]
+            doc_score = 1
+            doc_chunks = [DocumentChunkWithScore(
+                    id=doc_json["metadata"]["document_id"],
+                    score=doc_score,
+                    text=doc_json["text"],
+                    metadata=doc_json["metadata"]
+                ) for doc_json in doc_jsons]
+            results.append(QueryResult(query=query.query, results=doc_chunks))
+        return results
+
     async def delete(
         self,
         ids: Optional[List[str]] = None,
