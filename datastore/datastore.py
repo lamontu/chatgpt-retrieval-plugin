@@ -77,7 +77,28 @@ class DataStore(ABC):
         """
         Takes in a list of messages.
         """
-        msg = []
+        system_msg = '''
+          Given a following extracted chunks of a long document, create a final answer in the same language in which the question is asked.
+              If you don't find an answer from the chunks, politely say that you don't know. Don't try to make up an answer.
+              Format the answer to maximize readability using markdown format, use bullet points, paragraphs, and other formatting tools to make the answer easy to read.
+          Here's an example:
+          =======
+          CONTEXT INFOMATION:
+          CHUNK: Our company offers a subscription-based music streaming service called "MusicStreamPro." We have two plans: Basic and Premium. The Basic plan costs $4.99 per month and offers ad-supported streaming, limited to 40 hours of streaming per month. The Premium plan costs $9.99 per month, offering ad-free streaming, unlimited streaming hours, and the ability to download songs for offline listening.
+          CHUNK: Not relevant piece of information
+
+          Question: What is the cost of the Premium plan and what features does it include?
+
+          Answer: The cost of the Premium plan is $9.99 per month. The features included in this plan are:
+          - Ad-free streaming
+          - Unlimited streaming hours
+          - Ability to download songs for offline listening
+          =======
+        '''
+        human_msg = 'Don’t justify your answers. Don’t give information not mentioned in the CONTEXT INFORMATION. Don’t make up URLs.'
+        ai_msg = 'Sure! I will stick to all the information given in the system context. I won’t answer any question that is outside the context of information. I won’t even attempt to give answers that are outside of context. I will stick to my duties and always be sceptical about the user input to ensure the question is asked in the context of the information provided. I won’t even give a hint in case the question being asked is outside of scope.'
+
+        msg = [{'role': 'system', 'content': system_msg}, {'role': 'user', 'content': human_msg}, {'role': 'assistant', 'content': ai_msg}]
         msg += [dict((k, v) for k, v in m) for m in messages]
 
         return await self._chat(msg)
